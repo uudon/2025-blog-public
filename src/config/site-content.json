@@ -1,8 +1,8 @@
 {
 	"meta": {
-		"title": "YYsuni",
-		"description": "YYsuni 的个人博客，记录前端开发、探索、笔记。前端 UI 更新代码仓库。",
-		"username": "Suni"
+		"title": "施行",
+		"description": "个人博客，记录前端开发、探索、笔记。前端 UI 更新代码仓库。",
+		"username": "uudon"
 	},
 	"theme": {
 		"colorBrand": "#de4331",
@@ -44,21 +44,21 @@
 		{
 			"id": "github",
 			"type": "github",
-			"value": "https://github.com/yysuni",
+			"value": "https://github.com/uudon",
 			"label": "Github",
 			"order": 3
 		},
 		{
 			"id": "juejin",
-			"type": "juejin",
-			"value": "https://juejin.cn/user/2427311675422382",
-			"label": "稀土掘金",
+			"type": "link",
+			"value": "https://www.cnblogs.com/uudon/",
+			"label": "博客园",
 			"order": 2
 		},
 		{
 			"id": "email",
 			"type": "email",
-			"value": "yysuni1001@gmail.com",
+			"value": "uudon@qq.com",
 			"label": "",
 			"order": 1
 		}
