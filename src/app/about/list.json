@@ -1,5 +1,5 @@
 {
 	"title": "关于本站",
 	"description": "一个基于 Github 的现代化博客系统",
-	"content": "## 技术栈\n\n- Next.js\n- React\n- TypeScript\n- Tailwind CSS\n- Motion\n- Github API"
+	"content": "## 👋 Hi, I'm 施行\n\n一名长期深耕移动端的 **Android 工程师 / 技术项目实践者**，专注：\n\n- `Android` / `Kotlin` / `Jetpack` / `Compose`\n- 客户端架构设计与性能优化\n- 移动端与 `AI` / 大模型 的结合实践\n- 需求管理、版本迭代与交付流程优化\n\n---\n\n### 🧩 我的技术栈\n\n- **语言**：`Kotlin` · `Java` · 正在补课 `Python`\n- **框架与组件**：`Jetpack`（ViewModel / LiveData / Room / Navigation）  \n  `Compose` · `Coroutine` · `Flow`\n- **工程与架构**：多模块化、组件化、MVVM / Clean Architecture  \n- **工具链**：`Git` · `Gradle` · `Android Studio` · `Vercel` · `Cloudflare`\n- **领域探索**：Android + AI（智能识别、推荐、自动化） · 鸿蒙预研\n\n---\n\n### 🛠 博客主要内容\n\n- 实战型 Android / Kotlin 技术文章  \n- 项目踩坑记录与问题解决方案（含代码示例）  \n- 移动端架构、性能优化、稳定性治理经验  \n- 从开发到 **技术项目管理（TPM）** 的转型思考与实践  \n- 偶尔也会写一点：工作感悟 & 生活的“厚度”\n\n---\n\n### 🎯 我在做的事\n\n- 打磨更好用、更稳定的移动端应用  \n- 梳理一套适合中小团队的 **需求 & 版本迭代流程**  \n- 探索 **“Android 开发者如何拥抱 AI 时代”** 的答案\n\n> 希望这些内容，能让正在路上的你少踩一些坑，多走一些捷径。\n"
 }
