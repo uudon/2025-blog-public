@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="blob:https://tangyingbao.com/5c61a4ba-9337-4b4b-9f3e-384b6fa37c29" alt="那一晚的记忆" width="260">
+  <img src="blob:https://tangyingbao.com/86b2dca4-ffba-4df2-8ccb-fcd800476fb8" alt="那一晚的记忆" width="260">
 </p>
 
 <p align="center">
