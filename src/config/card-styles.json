@@ -39,7 +39,7 @@
 		"order": 6,
 		"offsetX": null,
 		"offsetY": null,
-		"enabled": true
+		"enabled": false
 	},
 	"socialButtons": {
 		"width": 315,
@@ -53,16 +53,16 @@
 		"width": 200,
 		"height": 180,
 		"order": 7,
-		"offsetX": null,
-		"offsetY": null,
+		"offsetX": -174,
+		"offsetY": 260,
 		"enabled": true
 	},
 	"articleCard": {
-		"width": 266,
-		"height": 160,
+		"width": 290,
+		"height": 178,
 		"order": 8,
-		"offsetX": null,
-		"offsetY": null,
+		"offsetX": -501,
+		"offsetY": 178,
 		"enabled": true
 	},
 	"writeButtons": {
@@ -85,8 +85,8 @@
 		"width": 54,
 		"height": 54,
 		"order": 8,
-		"offsetX": null,
-		"offsetY": null,
+		"offsetX": 105,
+		"offsetY": 312,
 		"enabled": true
 	},
 	"hatCard": {
@@ -95,6 +95,6 @@
 		"order": 10,
 		"offsetX": -48,
 		"offsetY": -168,
-		"enabled": true
+		"enabled": false
 	}
 }
