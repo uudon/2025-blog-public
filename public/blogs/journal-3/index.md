@@ -1,0 +1,1 @@
+![](/blogs/journal-3/7fef499f8e4f68d1.webp)
