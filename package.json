@@ -6,7 +6,8 @@
 		"dev": "next dev --turbopack -p 2025",
 		"svg": "node scripts/gen-svgs-index.js",
 		"build": "next build",
-		"start": "next start"
+		"start": "next start",
+		"postinstall": "prisma generate"
 	},
 	"dependencies": {
 		"@opennextjs/cloudflare": "^1.14.4",
