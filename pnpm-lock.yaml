@@ -14,6 +14,9 @@ importers:
       '@prisma/client':
         specifier: ^7.4.2
         version: 7.4.2(prisma@7.4.2(@types/react@19.2.2)(react-dom@19.2.0(react@19.2.1))(react@19.2.1)(typescript@5.9.3))(typescript@5.9.3)
+      '@prisma/config':
+        specifier: ^7.4.2
+        version: 7.4.2
       '@types/jsrsasign':
         specifier: ^10.5.15
         version: 10.5.15
