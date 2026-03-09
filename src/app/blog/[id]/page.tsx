@@ -8,6 +8,8 @@ import { BlogPreview } from '@/components/blog-preview'
 import { loadBlog, type BlogConfig } from '@/lib/load-blog'
 import { useReadArticles } from '@/hooks/use-read-articles'
 import LiquidGrass from '@/components/liquid-grass'
+import { PageViewTracker } from '@/components/analytics/page-view-tracker'
+import { ViewCounter } from '@/components/analytics/view-counter'
 
 export default function Page() {
 	const params = useParams() as { id?: string | string[] }
@@ -70,6 +72,8 @@ export default function Page() {
 
 	return (
 		<>
+			<PageViewTracker slug={slug} />
+
 			<BlogPreview
 				markdown={blog.markdown}
 				title={title}
@@ -79,6 +83,11 @@ export default function Page() {
 				cover={blog.cover ? `${origin}${blog.cover}` : undefined}
 				slug={slug}
 			/>
+
+			{/* View count display */}
+			<div className='absolute top-4 left-6 flex items-center gap-3 max-sm:left-4'>
+				<ViewCounter slug={slug} showLabel={false} />
+			</div>
 
 			<motion.button
 				initial={{ opacity: 0, scale: 0.6 }}

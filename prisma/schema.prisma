@@ -1,0 +1,43 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Analytics tables
+model PageView {
+  id          Int      @id @default(autoincrement())
+  slug        String
+  timestamp   DateTime @default(now())
+  visitorId   String
+  referrer    String?
+  userAgent   String?
+  country     String?
+  createdAt   DateTime @default(now())
+
+  @@index([slug, timestamp])
+  @@index([visitorId])
+  @@index([timestamp])
+  @@map("page_views")
+}
+
+model DailyStats {
+  id            Int      @id @default(autoincrement())
+  slug          String
+  date          DateTime @db.Date
+  pageViews     Int      @default(0) @map("page_views")
+  uniqueVisitors Int      @default(0) @map("unique_visitors")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([slug, date])
+  @@index([slug, date])
+  @@map("daily_stats")
+}
