@@ -1,4 +1,4 @@
-import Redis from 'ioredis'
+import { executeRedis } from './redis'
 
 export interface PageView {
 	id: string
@@ -20,95 +20,73 @@ interface AnalyticsMetadata {
 	uniqueVisitors: number
 }
 
-// Redis client singleton
-let redisClient: Redis | null = null
-
-function getRedisClient(): Redis {
-	if (!redisClient) {
-		const redisUrl = process.env.KV_URL || process.env.REDIS_URL
-		if (!redisUrl) {
-			throw new Error('KV_URL or REDIS_URL environment variable is not set')
-		}
-		redisClient = new Redis(redisUrl, {
-			maxRetriesPerRequest: 3,
-			enableReadyCheck: true,
-			lazyConnect: false
-		})
-
-		// Handle connection errors
-		redisClient.on('error', err => {
-			console.error('Redis Client Error:', err)
-		})
-
-		redisClient.on('connect', () => {
-			console.log('Redis Client Connected')
-		})
-	}
-	return redisClient
-}
-
 // Helper function to get all page views
 async function getAllPageViews(): Promise<PageView[]> {
-	const redis = getRedisClient()
-	const data = await redis.get(PAGE_VIEWS_KEY)
-	if (!data) return []
-	try {
-		return JSON.parse(data) as PageView[]
-	} catch {
-		return []
-	}
+	return executeRedis(async (redis) => {
+		const data = await redis.get(PAGE_VIEWS_KEY)
+		if (!data) return []
+		try {
+			return JSON.parse(data) as PageView[]
+		} catch {
+			return []
+		}
+	})
 }
 
 // Helper function to save all page views
 async function saveAllPageViews(views: PageView[]): Promise<void> {
-	const redis = getRedisClient()
-	await redis.set(PAGE_VIEWS_KEY, JSON.stringify(views))
+	return executeRedis(async (redis) => {
+		await redis.set(PAGE_VIEWS_KEY, JSON.stringify(views))
+	})
 }
 
 // Helper function to get and update metadata
 async function updateMetadata(pageViews: PageView[]): Promise<void> {
-	const redis = getRedisClient()
-	const uniqueVisitors = new Set(pageViews.map(v => v.visitorId)).size
-	const metadata: AnalyticsMetadata = {
-		lastUpdated: new Date().toISOString(),
-		totalViews: pageViews.length,
-		uniqueVisitors
-	}
-	await redis.set(METADATA_KEY, JSON.stringify(metadata))
+	return executeRedis(async (redis) => {
+		const uniqueVisitors = new Set(pageViews.map(v => v.visitorId)).size
+		const metadata: AnalyticsMetadata = {
+			lastUpdated: new Date().toISOString(),
+			totalViews: pageViews.length,
+			uniqueVisitors
+		}
+		await redis.set(METADATA_KEY, JSON.stringify(metadata))
+	})
 }
 
 export async function readAnalyticsData(): Promise<{
 	pageViews: PageView[]
 	metadata: AnalyticsMetadata
 }> {
-	const redis = getRedisClient()
-	const pageViews = await getAllPageViews()
-	const metadataData = await redis.get(METADATA_KEY)
+	return executeRedis(async (redis) => {
+		const pageViews = await getAllPageViews()
+		const metadataData = await redis.get(METADATA_KEY)
 
-	let metadata: AnalyticsMetadata = {
-		lastUpdated: null,
-		totalViews: 0,
-		uniqueVisitors: 0
-	}
-
-	if (metadataData) {
-		try {
-			metadata = JSON.parse(metadataData) as AnalyticsMetadata
-		} catch {
-			// Use default metadata
+		let metadata: AnalyticsMetadata = {
+			lastUpdated: null,
+			totalViews: 0,
+			uniqueVisitors: 0
 		}
-	}
 
-	return {
-		pageViews,
-		metadata
-	}
+		if (metadataData) {
+			try {
+				metadata = JSON.parse(metadataData) as AnalyticsMetadata
+			} catch {
+				// Use default metadata
+			}
+		}
+
+		return {
+			pageViews,
+			metadata
+		}
+	})
 }
 
 export async function writeAnalyticsData(data: { pageViews: PageView[]; metadata: AnalyticsMetadata }): Promise<void> {
-	const redis = getRedisClient()
-	await saveAllPageViews(data.pageViews)
-	await redis.set(METADATA_KEY, JSON.stringify(data.metadata))
+	return executeRedis(async (redis) => {
+		await saveAllPageViews(data.pageViews)
+		await redis.set(METADATA_KEY, JSON.stringify(data.metadata))
+	})
 }
 
 export async function addPageView(pageView: PageView): Promise<void> {
