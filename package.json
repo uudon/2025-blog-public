@@ -11,10 +11,10 @@
 	"dependencies": {
 		"@opennextjs/cloudflare": "^1.14.4",
 		"@types/jsrsasign": "^10.5.15",
-		"@vercel/kv": "^3.0.0",
 		"clsx": "^2.1.1",
 		"dayjs": "^1.11.18",
 		"html-react-parser": "^5.2.8",
+		"ioredis": "^5.10.0",
 		"jsrsasign": "^11.1.0",
 		"lucide-react": "^0.553.0",
 		"marked": "^17.0.0",

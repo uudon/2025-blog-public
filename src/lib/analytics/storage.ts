@@ -1,4 +1,4 @@
-import { kv } from '@vercel/kv'
+import Redis from 'ioredis'
 
 export interface PageView {
 	id: string
@@ -20,42 +20,75 @@ interface AnalyticsMetadata {
 	uniqueVisitors: number
 }
 
+// Redis client singleton
+let redisClient: Redis | null = null
+
+function getRedisClient(): Redis {
+	if (!redisClient) {
+		const redisUrl = process.env.KV_URL || process.env.REDIS_URL
+		if (!redisUrl) {
+			throw new Error('KV_URL or REDIS_URL environment variable is not set')
+		}
+		redisClient = new Redis(redisUrl)
+	}
+	return redisClient
+}
+
 // Helper function to get all page views
 async function getAllPageViews(): Promise<PageView[]> {
-	const views = await kv.get<PageView[]>(PAGE_VIEWS_KEY)
-	return views || []
+	const redis = getRedisClient()
+	const data = await redis.get(PAGE_VIEWS_KEY)
+	if (!data) return []
+	try {
+		return JSON.parse(data) as PageView[]
+	} catch {
+		return []
+	}
 }
 
 // Helper function to save all page views
 async function saveAllPageViews(views: PageView[]): Promise<void> {
-	await kv.set(PAGE_VIEWS_KEY, views)
+	const redis = getRedisClient()
+	await redis.set(PAGE_VIEWS_KEY, JSON.stringify(views))
 }
 
 // Helper function to get and update metadata
 async function updateMetadata(pageViews: PageView[]): Promise<void> {
+	const redis = getRedisClient()
 	const uniqueVisitors = new Set(pageViews.map((v) => v.visitorId)).size
 	const metadata: AnalyticsMetadata = {
 		lastUpdated: new Date().toISOString(),
 		totalViews: pageViews.length,
 		uniqueVisitors
 	}
-	await kv.set(METADATA_KEY, metadata)
+	await redis.set(METADATA_KEY, JSON.stringify(metadata))
 }
 
 export async function readAnalyticsData(): Promise<{
 	pageViews: PageView[]
 	metadata: AnalyticsMetadata
 }> {
+	const redis = getRedisClient()
 	const pageViews = await getAllPageViews()
-	const metadata = await kv.get<AnalyticsMetadata>(METADATA_KEY)
+	const metadataData = await redis.get(METADATA_KEY)
+
+	let metadata: AnalyticsMetadata = {
+		lastUpdated: null,
+		totalViews: 0,
+		uniqueVisitors: 0
+	}
+
+	if (metadataData) {
+		try {
+			metadata = JSON.parse(metadataData) as AnalyticsMetadata
+		} catch {
+			// Use default metadata
+		}
+	}
 
 	return {
 		pageViews,
-		metadata: metadata || {
-			lastUpdated: null,
-			totalViews: 0,
-			uniqueVisitors: 0
-		}
+		metadata
 	}
 }
 
@@ -63,8 +96,9 @@ export async function writeAnalyticsData(data: {
 	pageViews: PageView[]
 	metadata: AnalyticsMetadata
 }): Promise<void> {
+	const redis = getRedisClient()
 	await saveAllPageViews(data.pageViews)
-	await kv.set(METADATA_KEY, data.metadata)
+	await redis.set(METADATA_KEY, JSON.stringify(data.metadata))
 }
 
 export async function addPageView(pageView: PageView): Promise<void> {
@@ -115,11 +149,11 @@ export async function getStats(): Promise<{
 		.sort((a, b) => b.views - a.views)
 		.slice(0, 10)
 
-	const metadata = await kv.get<AnalyticsMetadata>(METADATA_KEY)
+	const metadata = await readAnalyticsData()
 
 	return {
-		totalViews: metadata?.totalViews || 0,
-		uniqueVisitors: metadata?.uniqueVisitors || 0,
+		totalViews: metadata.metadata.totalViews || 0,
+		uniqueVisitors: metadata.metadata.uniqueVisitors || 0,
 		topPages
 	}
 }
