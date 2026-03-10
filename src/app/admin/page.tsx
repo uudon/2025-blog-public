@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -28,7 +28,7 @@ interface RecentView {
 	country?: string
 }
 
-export default function AdminPage() {
+function AdminContent() {
 	const router = useRouter()
 	const searchParams = useSearchParams()
 	const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -286,5 +286,13 @@ export default function AdminPage() {
 				)}
 			</div>
 		</div>
+	)
+}
+
+export default function AdminPage() {
+	return (
+		<Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+			<AdminContent />
+		</Suspense>
 	)
 }
