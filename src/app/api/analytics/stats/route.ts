@@ -4,10 +4,15 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { hashIp, isBot, extractCountry, extractReferrer } from '@/lib/analytics/utils'
+import { readAnalyticsData, getViewsByDateRange } from '@/lib/analytics/storage'
 
 export const runtime = 'nodejs'
+
+interface DailyStat {
+	date: string
+	views: number
+	visitors: number
+}
 
 /**
  * GET /api/analytics/stats
@@ -25,92 +30,53 @@ export async function GET(request: NextRequest) {
 
 		const startDate = new Date()
 		startDate.setDate(startDate.getDate() - days)
+		startDate.setHours(0, 0, 0, 0)
 
-		if (slug === 'all' || !slug) {
-			// Get overall stats
-			const totalStats = await prisma.pageView.aggregate({
-				_count: true,
-				_total_views: { sum: { id: true } },
-				_unique_visitors: { count: { distinct: ['visitorId'] } },
-				where: {
-					timestamp: {
-						gte: startDate
-					}
-				}
-			})
+		const endDate = new Date()
+		endDate.setHours(23, 59, 59, 999)
 
-			// Get daily stats
-			const dailyStats = await prisma.dailyStats.findMany({
-				where: {
-					slug: 'all',
-					date: {
-						gte: new Date(new Date().setDate(new Date().getDate() - days))
-					}
-				},
-				orderBy: {
-					date: 'desc'
-				},
-				take: days
-			})
+		// Get all views in date range
+		const views = await getViewsByDateRange(startDate, endDate)
 
-			return NextResponse.json({
-				slug: 'all',
-				totalViews: totalStats._count || 0,
-				totalVisitors: totalStats._unique_visitors || 0,
-				dailyStats: dailyStats.map((d) => ({
-					date: d.date.toISOString().split('T')[0],
-					views: d.pageViews,
-					visitors: d.uniqueVisitors
-				}))
-			})
-		} else {
-			// Get specific article stats
-			const articleStats = await prisma.pageView.aggregate({
-				_count: true,
-				where: {
-					slug,
-					timestamp: {
-						gte: startDate
-					}
-				}
-			})
+		// Filter by slug if provided
+		const filteredViews = slug && slug !== 'all' ? views.filter((v) => v.slug === slug) : views
 
-			const uniqueVisitors = await prisma.pageView.groupBy({
-				by: ['visitorId'],
-				where: {
-					slug,
-					timestamp: {
-						gte: startDate
-					}
-				},
-				_count: true
-			})
+		// Calculate total views
+		const totalViews = filteredViews.length
 
-			// Get daily stats
-			const dailyStats = await prisma.dailyStats.findMany({
-				where: {
-					slug,
-					date: {
-						gte: new Date(new Date().setDate(new Date().getDate() - days))
-					}
-				},
-				orderBy: {
-					date: 'desc'
-				},
-				take: days
-			})
+		// Calculate unique visitors
+		const uniqueVisitors = new Set(filteredViews.map((v) => v.visitorId)).size
 
-			return NextResponse.json({
-				slug,
-				totalViews: articleStats._count || 0,
-				totalVisitors: uniqueVisitors.length || 0,
-				dailyStats: dailyStats.map((d) => ({
-					date: d.date.toISOString().split('T')[0],
-					views: d.pageViews,
-					visitors: d.uniqueVisitors
-				}))
-			})
-		}
+		// Calculate daily stats
+		const dailyStatsMap = new Map<string, DailyStat>()
+
+		filteredViews.forEach((view) => {
+			const date = view.timestamp.split('T')[0]
+			if (!dailyStatsMap.has(date)) {
+				dailyStatsMap.set(date, { date, views: 0, visitors: new Set<string>() })
+			}
+			const stat = dailyStatsMap.get(date)!
+			stat.views++
+			// @ts-ignore - using Set for visitors counting
+			stat.visitors.add(view.visitorId)
+		})
+
+		// Convert Set to count and sort by date
+		const dailyStats = Array.from(dailyStatsMap.values())
+			.map((stat) => ({
+				date: stat.date,
+				views: stat.views,
+				visitors: typeof stat.visitors === 'number' ? stat.visitors : (stat.visitors as Set<string>).size
+			}))
+			.sort((a, b) => b.date.localeCompare(a.date))
+			.slice(0, days)
+
+		return NextResponse.json({
+			slug: slug || 'all',
+			totalViews,
+			totalVisitors: uniqueVisitors,
+			dailyStats
+		})
 	} catch (error) {
 		console.error('Analytics stats error:', error)
 		return NextResponse.json(

@@ -4,8 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { hashIp, isBot, extractCountry, extractReferrer } from '@/lib/analytics/utils'
+import { hashIp, isBot, extractReferrer } from '@/lib/analytics/utils'
+import { addPageView, type PageView } from '@/lib/analytics/storage'
 
 export const runtime = 'nodejs'
 
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 		const ip = headers.get('x-forwarded-for') || headers.get('x-real-ip') || '0.0.0.0'
 		const userAgent = headers.get('user-agent') || ''
 		const referrer = extractReferrer(headers, request.nextUrl.origin)
-		const country = extractCountry(headers)
+		const country = headers.get('cf-ipcountry') || undefined
 
 		// Check if it's a bot
 		const botCheck = isBot(userAgent)
@@ -51,48 +51,20 @@ export async function POST(request: NextRequest) {
 		// Hash IP for privacy
 		const visitorId = await hashIp(ip)
 
+		// Create page view record
+		const pageView: PageView = {
+			id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+			slug,
+			timestamp: new Date().toISOString(),
+			visitorId,
+			ip: ip.split(',')[0] || '0.0.0.0', // Take first IP if multiple
+			referrer,
+			userAgent,
+			country
+		}
+
 		// Record page view
-		await prisma.pageView.create({
-			data: {
-				slug,
-				timestamp: new Date(),
-				visitorId,
-				referrer,
-				userAgent,
-				country
-			}
-		})
-
-		// Update daily stats
-		const today = new Date()
-		today.setHours(0, 0, 0, 0)
-
-		await prisma.dailyStats.upsert({
-			where: {
-				slug_date: {
-					slug,
-					date: today
-				}
-			},
-			create: {
-				data: {
-					slug,
-					date: today,
-					pageViews: 1,
-					uniqueVisitors: 1
-				}
-			},
-			update: {
-				data: {
-					pageViews: {
-						increment: 1
-					},
-					uniqueVisitors: {
-						increment: 1
-					}
-				}
-			}
-		})
+		await addPageView(pageView)
 
 		return NextResponse.json({ success: true })
 	} catch (error) {

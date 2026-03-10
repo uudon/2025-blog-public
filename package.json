@@ -6,12 +6,10 @@
 		"dev": "next dev --turbopack -p 2025",
 		"svg": "node scripts/gen-svgs-index.js",
 		"build": "next build",
-		"start": "next start",
-		"postinstall": "prisma generate"
+		"start": "next start"
 	},
 	"dependencies": {
 		"@opennextjs/cloudflare": "^1.14.4",
-		"@prisma/client": "^6.19.2",
 		"@types/jsrsasign": "^10.5.15",
 		"clsx": "^2.1.1",
 		"dayjs": "^1.11.18",
@@ -21,7 +19,6 @@
 		"marked": "^17.0.0",
 		"motion": "^12.23.24",
 		"next": "16.0.7",
-		"prisma": "^6.19.2",
 		"react": "19.2.1",
 		"react-dom": "19.2.0",
 		"recharts": "^2.15.0",

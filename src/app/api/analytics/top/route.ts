@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getViewsByDateRange } from '@/lib/analytics/storage'
 
 export const runtime = 'nodejs'
 
@@ -24,29 +24,38 @@ export async function GET(request: NextRequest) {
 
 		const startDate = new Date()
 		startDate.setDate(startDate.getDate() - days)
+		startDate.setHours(0, 0, 0, 0)
 
-		const topArticles = await prisma.pageView.groupBy({
-			by: ['slug'],
-			where: {
-				timestamp: {
-					gte: startDate
-				}
-			},
-			_count: {
-				views: true
-			},
-			orderBy: {
-				views: 'desc'
-			},
-			take: limit
+		const endDate = new Date()
+		endDate.setHours(23, 59, 59, 999)
+
+		// Get all views in date range
+		const views = await getViewsByDateRange(startDate, endDate)
+
+		// Group by slug and count views
+		const articleStats = new Map<string, { views: number; visitors: Set<string> }>()
+
+		views.forEach((view) => {
+			if (!articleStats.has(view.slug)) {
+				articleStats.set(view.slug, { views: 0, visitors: new Set() })
+			}
+			const stat = articleStats.get(view.slug)!
+			stat.views++
+			stat.visitors.add(view.visitorId)
 		})
 
-		return NextResponse.json({
-			articles: topArticles.map((a) => ({
-				slug: a.slug,
-				views: a._count.views,
-				visitors: a._count.visitors || 0
+		// Convert to array and sort by views
+		const topArticles = Array.from(articleStats.entries())
+			.map(([slug, stats]) => ({
+				slug,
+				views: stats.views,
+				visitors: stats.visitors.size
 			}))
+			.sort((a, b) => b.views - a.views)
+			.slice(0, limit)
+
+		return NextResponse.json({
+			articles: topArticles
 		})
 	} catch (error) {
 		console.error('Analytics top articles error:', error)

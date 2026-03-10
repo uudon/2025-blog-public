@@ -81,20 +81,3 @@ export function extractReferrer(headers: Headers, origin: string): string | unde
 		return referrer
 	}
 }
-
-/**
- * Generate Prisma client for analytics operations
- * Wraps operations in error handling
- */
-export async function recordPageView(
-	slug: string,
-	visitorId: string,
-	referrer: string | undefined,
-	userAgent: string | undefined,
-	country: string | undefined
-) {
-	const { prisma } = await import('@/lib/prisma')
-
-	// Implement your page view recording logic here
-	// This is a placeholder function
-}
