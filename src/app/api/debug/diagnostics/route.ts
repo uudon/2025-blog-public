@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
 			KV_URL: process.env.KV_URL ? 'SET (length: ' + process.env.KV_URL.length + ')' : 'NOT SET',
 			REDIS_URL: process.env.REDIS_URL ? 'SET (length: ' + process.env.REDIS_URL.length + ')' : 'NOT SET',
 			DATABASE_URL: process.env.DATABASE_URL ? 'SET' : 'NOT SET',
+			ADMIN_PASSWORD: process.env.ADMIN_PASSWORD ? 'SET (length: ' + process.env.ADMIN_PASSWORD.length + ')' : 'NOT SET'
 		},
 		network: {}
 	}
@@ -80,7 +81,7 @@ export async function GET(request: NextRequest) {
 				setTimeout(() => reject(new Error('Timeout after 3s')), 3000)
 			})
 
-			const pingResult = await Promise.race([pingPromise, timeoutPromise]) as any
+			const pingResult = (await Promise.race([pingPromise, timeoutPromise])) as any
 
 			diagnostics.redisConnection = {
 				success: true,
