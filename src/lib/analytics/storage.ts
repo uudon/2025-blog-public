@@ -29,7 +29,20 @@ function getRedisClient(): Redis {
 		if (!redisUrl) {
 			throw new Error('KV_URL or REDIS_URL environment variable is not set')
 		}
-		redisClient = new Redis(redisUrl)
+		redisClient = new Redis(redisUrl, {
+			maxRetriesPerRequest: 3,
+			enableReadyCheck: true,
+			lazyConnect: false
+		})
+
+		// Handle connection errors
+		redisClient.on('error', err => {
+			console.error('Redis Client Error:', err)
+		})
+
+		redisClient.on('connect', () => {
+			console.log('Redis Client Connected')
+		})
 	}
 	return redisClient
 }
@@ -55,7 +68,7 @@ async function saveAllPageViews(views: PageView[]): Promise<void> {
 // Helper function to get and update metadata
 async function updateMetadata(pageViews: PageView[]): Promise<void> {
 	const redis = getRedisClient()
-	const uniqueVisitors = new Set(pageViews.map((v) => v.visitorId)).size
+	const uniqueVisitors = new Set(pageViews.map(v => v.visitorId)).size
 	const metadata: AnalyticsMetadata = {
 		lastUpdated: new Date().toISOString(),
 		totalViews: pageViews.length,
@@ -92,10 +105,7 @@ export async function readAnalyticsData(): Promise<{
 	}
 }
 
-export async function writeAnalyticsData(data: {
-	pageViews: PageView[]
-	metadata: AnalyticsMetadata
-}): Promise<void> {
+export async function writeAnalyticsData(data: { pageViews: PageView[]; metadata: AnalyticsMetadata }): Promise<void> {
 	const redis = getRedisClient()
 	await saveAllPageViews(data.pageViews)
 	await redis.set(METADATA_KEY, JSON.stringify(data.metadata))
@@ -110,15 +120,13 @@ export async function addPageView(pageView: PageView): Promise<void> {
 
 export async function getPageViews(limit?: number): Promise<PageView[]> {
 	const views = await getAllPageViews()
-	const sorted = views.sort(
-		(a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-	)
+	const sorted = views.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 	return limit ? sorted.slice(0, limit) : sorted
 }
 
 export async function getPageViewsBySlug(slug: string): Promise<PageView[]> {
 	const views = await getAllPageViews()
-	return views.filter((v) => v.slug === slug)
+	return views.filter(v => v.slug === slug)
 }
 
 export async function getStats(): Promise<{
@@ -131,7 +139,7 @@ export async function getStats(): Promise<{
 	// Calculate stats per page
 	const pageStats = new Map<string, { views: number; uniqueVisitors: Set<string> }>()
 
-	views.forEach((view) => {
+	views.forEach(view => {
 		if (!pageStats.has(view.slug)) {
 			pageStats.set(view.slug, { views: 0, uniqueVisitors: new Set() })
 		}
@@ -162,12 +170,9 @@ export async function getRecentViews(limit = 50): Promise<PageView[]> {
 	return getPageViews(limit)
 }
 
-export async function getViewsByDateRange(
-	startDate: Date,
-	endDate: Date
-): Promise<PageView[]> {
+export async function getViewsByDateRange(startDate: Date, endDate: Date): Promise<PageView[]> {
 	const views = await getAllPageViews()
-	return views.filter((view) => {
+	return views.filter(view => {
 		const viewDate = new Date(view.timestamp)
 		return viewDate >= startDate && viewDate <= endDate
 	})
