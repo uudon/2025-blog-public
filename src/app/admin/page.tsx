@@ -1,7 +1,6 @@
 'use client'
 
-import { useEffect, useState, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 interface Stats {
@@ -28,9 +27,8 @@ interface RecentView {
 	country?: string
 }
 
+// Separate component that uses search params
 function AdminContent() {
-	const router = useRouter()
-	const searchParams = useSearchParams()
 	const [isAuthenticated, setIsAuthenticated] = useState(false)
 	const [password, setPassword] = useState('')
 	const [error, setError] = useState('')
@@ -40,9 +38,10 @@ function AdminContent() {
 	const [loading, setLoading] = useState(false)
 	const [activeTab, setActiveTab] = useState<'overview' | 'top' | 'recent'>('overview')
 
-	// Check if already authenticated via URL param
+	// Check URL params on mount
 	useEffect(() => {
-		const urlPassword = searchParams.get('password')
+		const params = new URLSearchParams(window.location.search)
+		const urlPassword = params.get('password')
 		if (urlPassword) {
 			// Verify password
 			fetch(`/api/admin/verify?password=${encodeURIComponent(urlPassword)}`)
@@ -57,7 +56,7 @@ function AdminContent() {
 				})
 				.catch(() => setError('Authentication failed'))
 		}
-	}, [searchParams])
+	}, [])
 
 	const handleLogin = async (e: React.FormEvent) => {
 		e.preventDefault()
@@ -71,9 +70,9 @@ function AdminContent() {
 			if (data.valid) {
 				setIsAuthenticated(true)
 				// Update URL to include password
-				const newUrl = new URL(window.location.href)
-				newUrl.searchParams.set('password', password)
-				window.history.replaceState({}, '', newUrl.toString())
+				const url = new URL(window.location.href)
+				url.searchParams.set('password', password)
+				window.history.replaceState({}, '', url.toString())
 				loadData()
 			} else {
 				setError('Invalid password')
@@ -117,9 +116,9 @@ function AdminContent() {
 		setTopArticles([])
 		setRecentViews([])
 		// Remove password from URL
-		const newUrl = new URL(window.location.href)
-		newUrl.searchParams.delete('password')
-		window.history.replaceState({}, '', newUrl.toString())
+		const url = new URL(window.location.href)
+		url.searchParams.delete('password')
+		window.history.replaceState({}, '', url.toString())
 	}
 
 	if (!isAuthenticated) {
@@ -273,9 +272,5 @@ function AdminContent() {
 }
 
 export default function AdminPage() {
-	return (
-		<Suspense fallback={<div className='flex min-h-screen items-center justify-center'>Loading...</div>}>
-			<AdminContent />
-		</Suspense>
-	)
+	return <AdminContent />
 }
