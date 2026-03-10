@@ -1,5 +1,4 @@
-import { promises as fs } from 'fs'
-import path from 'path'
+import { kv } from '@vercel/kv'
 
 export interface PageView {
 	id: string
@@ -12,109 +11,80 @@ export interface PageView {
 	country?: string
 }
 
-export interface AnalyticsData {
+const PAGE_VIEWS_KEY = 'analytics:page_views'
+const METADATA_KEY = 'analytics:metadata'
+
+interface AnalyticsMetadata {
+	lastUpdated: string | null
+	totalViews: number
+	uniqueVisitors: number
+}
+
+// Helper function to get all page views
+async function getAllPageViews(): Promise<PageView[]> {
+	const views = await kv.get<PageView[]>(PAGE_VIEWS_KEY)
+	return views || []
+}
+
+// Helper function to save all page views
+async function saveAllPageViews(views: PageView[]): Promise<void> {
+	await kv.set(PAGE_VIEWS_KEY, views)
+}
+
+// Helper function to get and update metadata
+async function updateMetadata(pageViews: PageView[]): Promise<void> {
+	const uniqueVisitors = new Set(pageViews.map((v) => v.visitorId)).size
+	const metadata: AnalyticsMetadata = {
+		lastUpdated: new Date().toISOString(),
+		totalViews: pageViews.length,
+		uniqueVisitors
+	}
+	await kv.set(METADATA_KEY, metadata)
+}
+
+export async function readAnalyticsData(): Promise<{
 	pageViews: PageView[]
-	metadata: {
-		lastUpdated: string | null
-		totalViews: number
-		uniqueVisitors: number
-	}
-}
+	metadata: AnalyticsMetadata
+}> {
+	const pageViews = await getAllPageViews()
+	const metadata = await kv.get<AnalyticsMetadata>(METADATA_KEY)
 
-const DATA_FILE_PATH = path.join(
-	process.cwd(),
-	'public',
-	'analytics',
-	'data.json'
-)
-
-// Simple file locking mechanism using a lock file
-const LOCK_FILE_PATH = path.join(process.cwd(), 'public', 'analytics', '.lock')
-const MAX_LOCK_WAIT_TIME = 5000 // 5 seconds
-const LOCK_RETRY_INTERVAL = 100 // 100ms
-
-async function acquireLock(): Promise<void> {
-	const startTime = Date.now()
-
-	while (Date.now() - startTime < MAX_LOCK_WAIT_TIME) {
-		try {
-			await fs.writeFile(LOCK_FILE_PATH, Date.now().toString(), { flag: 'wx' })
-			return // Lock acquired
-		} catch (error) {
-			// Lock file exists, wait and retry
-			await new Promise((resolve) => setTimeout(resolve, LOCK_RETRY_INTERVAL))
-		}
-	}
-
-	throw new Error('Could not acquire lock after maximum wait time')
-}
-
-async function releaseLock(): Promise<void> {
-	try {
-		await fs.unlink(LOCK_FILE_PATH)
-	} catch (error) {
-		// Ignore errors when releasing lock
-	}
-}
-
-async function withLock<T>(operation: () => Promise<T>): Promise<T> {
-	await acquireLock()
-	try {
-		return await operation()
-	} finally {
-		await releaseLock()
-	}
-}
-
-export async function readAnalyticsData(): Promise<AnalyticsData> {
-	try {
-		const data = await fs.readFile(DATA_FILE_PATH, 'utf-8')
-		return JSON.parse(data)
-	} catch (error) {
-		// If file doesn't exist or is corrupted, return default data
-		return {
-			pageViews: [],
-			metadata: {
-				lastUpdated: null,
-				totalViews: 0,
-				uniqueVisitors: 0,
-			},
+	return {
+		pageViews,
+		metadata: metadata || {
+			lastUpdated: null,
+			totalViews: 0,
+			uniqueVisitors: 0
 		}
 	}
 }
 
-export async function writeAnalyticsData(data: AnalyticsData): Promise<void> {
-	return withLock(async () => {
-		// Update metadata
-		data.metadata.lastUpdated = new Date().toISOString()
-		data.metadata.totalViews = data.pageViews.length
-		const uniqueVisitors = new Set(data.pageViews.map((v) => v.visitorId))
-		data.metadata.uniqueVisitors = uniqueVisitors.size
-
-		// Write to a temporary file first, then rename for atomic write
-		const tempFilePath = DATA_FILE_PATH + '.tmp'
-		await fs.writeFile(tempFilePath, JSON.stringify(data, null, 2), 'utf-8')
-		await fs.rename(tempFilePath, DATA_FILE_PATH)
-	})
+export async function writeAnalyticsData(data: {
+	pageViews: PageView[]
+	metadata: AnalyticsMetadata
+}): Promise<void> {
+	await saveAllPageViews(data.pageViews)
+	await kv.set(METADATA_KEY, data.metadata)
 }
 
 export async function addPageView(pageView: PageView): Promise<void> {
-	const data = await readAnalyticsData()
-	data.pageViews.push(pageView)
-	await writeAnalyticsData(data)
+	const views = await getAllPageViews()
+	views.push(pageView)
+	await saveAllPageViews(views)
+	await updateMetadata(views)
 }
 
 export async function getPageViews(limit?: number): Promise<PageView[]> {
-	const data = await readAnalyticsData()
-	const views = [...data.pageViews].sort(
+	const views = await getAllPageViews()
+	const sorted = views.sort(
 		(a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
 	)
-	return limit ? views.slice(0, limit) : views
+	return limit ? sorted.slice(0, limit) : sorted
 }
 
 export async function getPageViewsBySlug(slug: string): Promise<PageView[]> {
-	const data = await readAnalyticsData()
-	return data.pageViews.filter((v) => v.slug === slug)
+	const views = await getAllPageViews()
+	return views.filter((v) => v.slug === slug)
 }
 
 export async function getStats(): Promise<{
@@ -122,15 +92,12 @@ export async function getStats(): Promise<{
 	uniqueVisitors: number
 	topPages: Array<{ slug: string; views: number; uniqueVisitors: number }>
 }> {
-	const data = await readAnalyticsData()
+	const views = await getAllPageViews()
 
 	// Calculate stats per page
-	const pageStats = new Map<
-		string,
-		{ views: number; uniqueVisitors: Set<string> }
-	>()
+	const pageStats = new Map<string, { views: number; uniqueVisitors: Set<string> }>()
 
-	data.pageViews.forEach((view) => {
+	views.forEach((view) => {
 		if (!pageStats.has(view.slug)) {
 			pageStats.set(view.slug, { views: 0, uniqueVisitors: new Set() })
 		}
@@ -143,15 +110,17 @@ export async function getStats(): Promise<{
 		.map(([slug, stats]) => ({
 			slug,
 			views: stats.views,
-			uniqueVisitors: stats.uniqueVisitors.size,
+			uniqueVisitors: stats.uniqueVisitors.size
 		}))
 		.sort((a, b) => b.views - a.views)
 		.slice(0, 10)
 
+	const metadata = await kv.get<AnalyticsMetadata>(METADATA_KEY)
+
 	return {
-		totalViews: data.metadata.totalViews,
-		uniqueVisitors: data.metadata.uniqueVisitors,
-		topPages,
+		totalViews: metadata?.totalViews || 0,
+		uniqueVisitors: metadata?.uniqueVisitors || 0,
+		topPages
 	}
 }
 
@@ -163,8 +132,8 @@ export async function getViewsByDateRange(
 	startDate: Date,
 	endDate: Date
 ): Promise<PageView[]> {
-	const data = await readAnalyticsData()
-	return data.pageViews.filter((view) => {
+	const views = await getAllPageViews()
+	return views.filter((view) => {
 		const viewDate = new Date(view.timestamp)
 		return viewDate >= startDate && viewDate <= endDate
 	})

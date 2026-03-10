@@ -46,8 +46,8 @@ function AdminContent() {
 		if (urlPassword) {
 			// Verify password
 			fetch(`/api/admin/verify?password=${encodeURIComponent(urlPassword)}`)
-				.then((res) => res.json())
-				.then((data) => {
+				.then(res => res.json())
+				.then(data => {
 					if (data.valid) {
 						setIsAuthenticated(true)
 						loadData()
@@ -98,13 +98,10 @@ function AdminContent() {
 			const topData = await topRes.json()
 			setTopArticles(topData.articles || [])
 
-			// Load recent views from public JSON
-			const viewsRes = await fetch('/analytics/data.json')
+			// Load recent views from API
+			const viewsRes = await fetch('/api/analytics/views?limit=50')
 			const viewsData = await viewsRes.json()
-			const sortedViews = (viewsData.pageViews || [])
-				.sort((a: RecentView, b: RecentView) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-				.slice(0, 50)
-			setRecentViews(sortedViews)
+			setRecentViews(viewsData.views || [])
 		} catch (err) {
 			console.error('Failed to load data:', err)
 			setError('Failed to load analytics data')
@@ -127,30 +124,26 @@ function AdminContent() {
 
 	if (!isAuthenticated) {
 		return (
-			<div className="min-h-screen flex items-center justify-center p-4">
-				<div className="max-w-md w-full">
-					<div className="bg-white rounded-lg shadow-xl p-8">
-						<h1 className="text-2xl font-bold mb-6 text-center">Admin Login</h1>
-						<form onSubmit={handleLogin} className="space-y-4">
+			<div className='flex min-h-screen items-center justify-center p-4'>
+				<div className='w-full max-w-md'>
+					<div className='rounded-lg bg-white p-8 shadow-xl'>
+						<h1 className='mb-6 text-center text-2xl font-bold'>Admin Login</h1>
+						<form onSubmit={handleLogin} className='space-y-4'>
 							<div>
-								<label htmlFor="password" className="block text-sm font-medium mb-2">
+								<label htmlFor='password' className='mb-2 block text-sm font-medium'>
 									Password
 								</label>
 								<input
-									id="password"
-									type="password"
+									id='password'
+									type='password'
 									value={password}
-									onChange={(e) => setPassword(e.target.value)}
-									className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand"
+									onChange={e => setPassword(e.target.value)}
+									className='focus:ring-brand w-full rounded-lg border px-4 py-2 focus:ring-2 focus:outline-none'
 									required
 								/>
 							</div>
-							{error && <p className="text-red-500 text-sm">{error}</p>}
-							<button
-								type="submit"
-								disabled={loading}
-								className="w-full bg-brand text-white py-2 rounded-lg hover:opacity-90 disabled:opacity-50"
-							>
+							{error && <p className='text-sm text-red-500'>{error}</p>}
+							<button type='submit' disabled={loading} className='bg-brand w-full rounded-lg py-2 text-white hover:opacity-90 disabled:opacity-50'>
 								{loading ? 'Verifying...' : 'Login'}
 							</button>
 						</form>
@@ -161,66 +154,58 @@ function AdminContent() {
 	}
 
 	return (
-		<div className="min-h-screen p-6">
-			<div className="max-w-7xl mx-auto">
-				<div className="flex justify-between items-center mb-8">
-					<h1 className="text-3xl font-bold">Analytics Dashboard</h1>
-					<button
-						onClick={handleLogout}
-						className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
-					>
+		<div className='min-h-screen p-6'>
+			<div className='mx-auto max-w-7xl'>
+				<div className='mb-8 flex items-center justify-between'>
+					<h1 className='text-3xl font-bold'>Analytics Dashboard</h1>
+					<button onClick={handleLogout} className='rounded-lg bg-gray-200 px-4 py-2 hover:bg-gray-300'>
 						Logout
 					</button>
 				</div>
 
 				{/* Tab Navigation */}
-				<div className="flex gap-4 mb-6 border-b">
+				<div className='mb-6 flex gap-4 border-b'>
 					<button
 						onClick={() => setActiveTab('overview')}
-						className={`px-4 py-2 ${activeTab === 'overview' ? 'border-b-2 border-brand text-brand' : 'text-gray-600'}`}
-					>
+						className={`px-4 py-2 ${activeTab === 'overview' ? 'border-brand text-brand border-b-2' : 'text-gray-600'}`}>
 						Overview
 					</button>
-					<button
-						onClick={() => setActiveTab('top')}
-						className={`px-4 py-2 ${activeTab === 'top' ? 'border-b-2 border-brand text-brand' : 'text-gray-600'}`}
-					>
+					<button onClick={() => setActiveTab('top')} className={`px-4 py-2 ${activeTab === 'top' ? 'border-brand text-brand border-b-2' : 'text-gray-600'}`}>
 						Top Pages
 					</button>
 					<button
 						onClick={() => setActiveTab('recent')}
-						className={`px-4 py-2 ${activeTab === 'recent' ? 'border-b-2 border-brand text-brand' : 'text-gray-600'}`}
-					>
+						className={`px-4 py-2 ${activeTab === 'recent' ? 'border-brand text-brand border-b-2' : 'text-gray-600'}`}>
 						Recent Views
 					</button>
 				</div>
 
-				{loading && !stats && <p className="text-center py-8">Loading...</p>}
+				{loading && !stats && <p className='py-8 text-center'>Loading...</p>}
 
 				{activeTab === 'overview' && stats && (
-					<div className="space-y-6">
+					<div className='space-y-6'>
 						{/* Stats Cards */}
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-							<div className="bg-white rounded-lg shadow p-6">
-								<h3 className="text-lg font-semibold mb-2">Total Views (30 days)</h3>
-								<p className="text-4xl font-bold text-brand">{stats.totalViews.toLocaleString()}</p>
+						<div className='grid grid-cols-1 gap-6 md:grid-cols-2'>
+							<div className='rounded-lg bg-white p-6 shadow'>
+								<h3 className='mb-2 text-lg font-semibold'>Total Views (30 days)</h3>
+								<p className='text-brand text-4xl font-bold'>{stats.totalViews.toLocaleString()}</p>
 							</div>
-							<div className="bg-white rounded-lg shadow p-6">
-								<h3 className="text-lg font-semibold mb-2">Unique Visitors (30 days)</h3>
-								<p className="text-4xl font-bold text-brand">{stats.totalVisitors.toLocaleString()}</p>
+							<div className='rounded-lg bg-white p-6 shadow'>
+								<h3 className='mb-2 text-lg font-semibold'>Unique Visitors (30 days)</h3>
+								<p className='text-brand text-4xl font-bold'>{stats.totalVisitors.toLocaleString()}</p>
 							</div>
 						</div>
 
 						{/* Daily Chart */}
-						<div className="bg-white rounded-lg shadow p-6">
-							<h3 className="text-lg font-semibold mb-4">Daily Views (Last 30 Days)</h3>
-							<ResponsiveContainer width="100%" height={300}>
+						<div className='rounded-lg bg-white p-6 shadow'>
+							<h3 className='mb-4 text-lg font-semibold'>Daily Views (Last 30 Days)</h3>
+							<ResponsiveContainer width='100%' height={300}>
 								<BarChart data={stats.dailyStats.slice(0, 30).reverse()}>
-									<CartesianGrid strokeDasharray="3 3" />
-									<XAxis dataKey="date" />
+									<CartesianGrid strokeDasharray='3 3' />
+									<XAxis dataKey='date' />
 									<YAxis />
 									<Tooltip />
-									<Bar dataKey="views" fill="#35bfab" />
+									<Bar dataKey='views' fill='#35bfab' />
 								</BarChart>
 							</ResponsiveContainer>
 						</div>
@@ -228,23 +213,23 @@ function AdminContent() {
 				)}
 
 				{activeTab === 'top' && (
-					<div className="bg-white rounded-lg shadow p-6">
-						<h3 className="text-lg font-semibold mb-4">Top Pages (Last 30 Days)</h3>
-						<div className="overflow-x-auto">
-							<table className="w-full">
+					<div className='rounded-lg bg-white p-6 shadow'>
+						<h3 className='mb-4 text-lg font-semibold'>Top Pages (Last 30 Days)</h3>
+						<div className='overflow-x-auto'>
+							<table className='w-full'>
 								<thead>
-									<tr className="border-b">
-										<th className="text-left py-3 px-4">Page</th>
-										<th className="text-right py-3 px-4">Views</th>
-										<th className="text-right py-3 px-4">Visitors</th>
+									<tr className='border-b'>
+										<th className='px-4 py-3 text-left'>Page</th>
+										<th className='px-4 py-3 text-right'>Views</th>
+										<th className='px-4 py-3 text-right'>Visitors</th>
 									</tr>
 								</thead>
 								<tbody>
-									{topArticles.map((article) => (
-										<tr key={article.slug} className="border-b hover:bg-gray-50">
-											<td className="py-3 px-4 font-mono text-sm">{article.slug}</td>
-											<td className="text-right py-3 px-4">{article.views.toLocaleString()}</td>
-											<td className="text-right py-3 px-4">{article.visitors.toLocaleString()}</td>
+									{topArticles.map(article => (
+										<tr key={article.slug} className='border-b hover:bg-gray-50'>
+											<td className='px-4 py-3 font-mono text-sm'>{article.slug}</td>
+											<td className='px-4 py-3 text-right'>{article.views.toLocaleString()}</td>
+											<td className='px-4 py-3 text-right'>{article.visitors.toLocaleString()}</td>
 										</tr>
 									))}
 								</tbody>
@@ -254,29 +239,27 @@ function AdminContent() {
 				)}
 
 				{activeTab === 'recent' && (
-					<div className="bg-white rounded-lg shadow p-6">
-						<h3 className="text-lg font-semibold mb-4">Recent 50 Views</h3>
-						<div className="overflow-x-auto">
-							<table className="w-full text-sm">
+					<div className='rounded-lg bg-white p-6 shadow'>
+						<h3 className='mb-4 text-lg font-semibold'>Recent 50 Views</h3>
+						<div className='overflow-x-auto'>
+							<table className='w-full text-sm'>
 								<thead>
-									<tr className="border-b">
-										<th className="text-left py-3 px-4">Time</th>
-										<th className="text-left py-3 px-4">Page</th>
-										<th className="text-left py-3 px-4">IP</th>
-										<th className="text-left py-3 px-4">Country</th>
-										<th className="text-left py-3 px-4">Referrer</th>
+									<tr className='border-b'>
+										<th className='px-4 py-3 text-left'>Time</th>
+										<th className='px-4 py-3 text-left'>Page</th>
+										<th className='px-4 py-3 text-left'>IP</th>
+										<th className='px-4 py-3 text-left'>Country</th>
+										<th className='px-4 py-3 text-left'>Referrer</th>
 									</tr>
 								</thead>
 								<tbody>
-									{recentViews.map((view) => (
-										<tr key={view.id} className="border-b hover:bg-gray-50">
-											<td className="py-3 px-4 whitespace-nowrap">
-												{new Date(view.timestamp).toLocaleString()}
-											</td>
-											<td className="py-3 px-4 font-mono">{view.slug}</td>
-											<td className="py-3 px-4">{view.ip}</td>
-											<td className="py-3 px-4">{view.country || '-'}</td>
-											<td className="py-3 px-4 max-w-xs truncate">{view.referrer || '-'}</td>
+									{recentViews.map(view => (
+										<tr key={view.id} className='border-b hover:bg-gray-50'>
+											<td className='px-4 py-3 whitespace-nowrap'>{new Date(view.timestamp).toLocaleString()}</td>
+											<td className='px-4 py-3 font-mono'>{view.slug}</td>
+											<td className='px-4 py-3'>{view.ip}</td>
+											<td className='px-4 py-3'>{view.country || '-'}</td>
+											<td className='max-w-xs truncate px-4 py-3'>{view.referrer || '-'}</td>
 										</tr>
 									))}
 								</tbody>
@@ -291,7 +274,7 @@ function AdminContent() {
 
 export default function AdminPage() {
 	return (
-		<Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+		<Suspense fallback={<div className='flex min-h-screen items-center justify-center'>Loading...</div>}>
 			<AdminContent />
 		</Suspense>
 	)
